@@ -570,7 +570,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Queue path:%s not exists:%s, so create it.\n", config_st.queue_path, strerror(errno));	
 		log_error("Queue path:%s not exists:%s, so create it.", config_st.queue_path, strerror(errno));	
 
-		mkdir(config_st.queue_path, 0644);
+		umask(0);
+		mkdir(config_st.queue_path, 0777);
 	}
 	
 

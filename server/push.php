@@ -13,7 +13,7 @@ $passphrase = '123qwe';
 $apnTestServer = 'ssl://gateway.sandbox.push.apple.com:2195';
 $apnserver = 'ssl://gateway.push.apple.com:2195';
 
-if ($argc != 4) {
+if ($argc != 5) {
 	echo "push.php param error";
 	return;
 }
@@ -21,12 +21,13 @@ if ($argc != 4) {
 $deviceToken = $argv[1];
 $fuid = $argv[2];
 $fnick = $argv[3];
+$ftype = $argv[4];
 $message = '您收到一条来自 '. base64_decode($fnick) .' 的消息';
 
 ////////////////////////////////////////////////////////////////////////////////
 
 $ctx = stream_context_create();
-stream_context_set_option($ctx, 'ssl', 'local_cert', 'ck.pem');
+stream_context_set_option($ctx, 'ssl', 'local_cert', 'ck_dev.pem');
 stream_context_set_option($ctx, 'ssl', 'passphrase', $passphrase);
 
 // Open a connection to the APNS server
@@ -43,6 +44,7 @@ echo 'Connected to APNS' . PHP_EOL;
 $body['aps'] = array(
 	'fuid'	=> $fuid,
 	'fnick' => $fnick,
+	'type' => $ftype,
 	'alert' => $message,
 	'sound' => 'default'
 	);

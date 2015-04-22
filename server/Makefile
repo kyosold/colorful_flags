@@ -1,6 +1,6 @@
 CC = gcc -g
-INCS = -I./confparser/ -I/usr/local/include/ -I/usr/local/include/ImageMagick-6/ -I/usr/local/webserver/mysql/include/mysql/
-LDS = -L/usr/local/lib64/ -L/usr/local/lib/ -L/usr/local/webserver/mysql/lib/mysql/ -lMagickWand-6.Q16 -lmysqlclient #-lmemcached
+INCS = -I./confparser/ -I/usr/local/include/ -I/usr/local/include/ImageMagick-6/ -I/usr/local/webserver/mysql/include/mysql/ -I/usr/local/json-c/include/
+LDS = -L/usr/local/lib64/ -L/usr/local/lib/ -L/usr/local/webserver/mysql/lib/mysql/ -L/usr/local/json-c/lib/ -lMagickWand-6.Q16 -lmysqlclient -lcurl -ljson-c #-lmemcached
 
 OBJS = liao_server
 

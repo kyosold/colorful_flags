@@ -7,10 +7,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <wand/MagickWand.h>
 //#include <libmemcached/memcached.h>
-#include "liao_log.h"
+#include "mysql.h"
 #include <sys/epoll.h>  
+#include <curl/curl.h>
+#include <wand/MagickWand.h>
+
+#include "liao_log.h"
 #include "liao_utils.h"
 #include "liao_server.h"
 
@@ -314,7 +317,7 @@ int safe_write(struct clients *client, char *buf, size_t buf_size)
 	send_pdt->data_len = n;
 	send_pdt->data_used = 0;
 
-	log_debug("add send message to queue: fd[%d] msg len:%d", client->fd, send_pdt->data_len);
+	log_debug("add send message to queue: fd[%d] msg len:%d:%s", client->fd, send_pdt->data_len, send_pdt->data);
 
 	epoll_event_mod(client->fd, EPOLLOUT);
 
@@ -322,10 +325,62 @@ int safe_write(struct clients *client, char *buf, size_t buf_size)
 }
 
 
-void send_apn_cmd(char *ios_token, char *fuid, char *fnick)
+int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *type)
+{
+	char b64_nick[MAX_LINE] = {0};
+	int b64_n = base64_decode(fnick, b64_nick, MAX_LINE);
+	if (b64_n <= 0) {
+		log_error("base64_decode fail");
+		return 1;
+	}
+	
+
+	char notice_mssage[MAX_LINE * 5] = {0};
+	int n = snprintf(notice_mssage, sizeof(notice_mssage), "您收到一条来自 %s 的消息", b64_nick);
+	if (n <= 0) {
+		log_error("snprintf fail");	
+		return 1;
+	}
+
+	int notice_msg_size = n * 5;
+	char *pnotice_msg = (char *)calloc(1, notice_msg_size);
+	if (pnotice_msg == NULL) {
+		log_error("calloc faile");
+		return 1;
+	}
+
+	int b64_size = base64_encode(notice_mssage, n, pnotice_msg, notice_msg_size);
+	if (b64_size < 0) {
+		log_error("base64_encode fail:%s", notice_mssage);
+
+		clean_mem_buf(pnotice_msg);
+		notice_msg_size = 0;
+
+		return 1;		
+	}
+
+	int notice_size = strlen(type) + strlen(fuid) + strlen(fnick) + b64_size + 512;
+	char *pnotice = (char *)calloc(1, notice_size);
+	if (pnotice != NULL) {
+		n = snprintf(pnotice, notice_size, "MESSAGENOTICE %s %s %s %s %s", type, fuid, fnick, pnotice_msg, DATA_END);
+
+		safe_write(client_t, pnotice, n);
+
+		clean_mem_buf(pnotice);
+		notice_size = 0;
+	}
+
+	clean_mem_buf(pnotice_msg);
+	notice_msg_size = 0;
+
+	return 0;
+		
+}
+
+void send_apn_cmd(char *ios_token, char *fuid, char *fnick, char *type)
 {
 	char cmd[MAX_LINE] = {0};
-	snprintf(cmd, sizeof(cmd), "./push.php '%s' '%s' '%s'", ios_token, fuid, fnick);
+	snprintf(cmd, sizeof(cmd), "./push.php '%s' '%s' '%s' '%s'", ios_token, fuid, fnick, type);
 	log_debug("APN CMD: %s", cmd);
 
 	FILE *fp;
@@ -763,4 +818,208 @@ FAIL:
 	return 1;
 	
 }
+
+
+// http api -----------------------------------
+struct curl_return_string {
+    char *str;
+    size_t len;
+    size_t size;
+}; // 用于存curl返回的结果
+
+size_t _recive_data_from_http_api(void *buffer, size_t size, size_t nmemb, void *user_p)
+{
+    struct curl_return_string *result_t = (struct curl_return_string *)user_p;
+
+    if (result_t->size < ((size * nmemb) + 1)) {
+        result_t->str = (char *)realloc(result_t->str, (size * nmemb) + 1);
+        if (result_t->str == NULL) {
+            return 0;
+        }
+        result_t->size = (size * nmemb) + 1;
+    }
+
+    result_t->len = size * nmemb;
+    memcpy(result_t->str, buffer, result_t->len);
+    result_t->str[result_t->len] = '\0';
+
+    return result_t->len;
+}
+
+void clean_mem_buf(char *buf)
+{
+	if (buf != NULL) {
+		free(buf);
+		buf = NULL;
+	}
+}
+
+
+char *login_http_api(char *url, char *account, char *password, char *ios_token, int get_friend_list, int *result_len)
+{
+	// 声明保存返回 http 的结果
+	struct curl_return_string curl_result_t;
+
+	char *presult = NULL;
+	*result_len = 0;
+
+	curl_result_t.len = 0;
+    curl_result_t.str = (char *)calloc(10, 1024);
+	if (curl_result_t.str == NULL) {
+		log_error("calloc fail for curl_result_t.str");
+		return NULL;
+	}	
+	curl_result_t.size = 10 * 1024;
+
+	curl_global_init(CURL_GLOBAL_ALL);
+
+	CURL *curl;
+	CURLcode ret;
+
+	// init curl
+	curl = curl_easy_init();
+	if (!curl) {
+		log_error("couldn't init curl");
+		goto FAIL;
+	}
+
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_POST, 1);    // use post 
+
+	// urlencode post data
+	char *account_encode = curl_easy_escape(curl, account, strlen(account));
+	if (!account_encode) {
+		log_error("urlencode account fail, so use source data");
+		account_encode = account;
+	}
+
+	char *password_encode = curl_easy_escape(curl, password, strlen(password));
+	if (!password_encode) {
+		log_error("urlencode password fail, so use source data");
+		password_encode = password;
+	}
+
+	char *ios_token_encode = curl_easy_escape(curl, ios_token, strlen(ios_token));
+	if (!ios_token_encode) {
+		log_error("urlencode ios_token_encode fail, so use source data");
+		ios_token_encode = ios_token;
+	}
+
+	int request_data_len = 8 + strlen(account_encode) + 10 +strlen(password_encode) + 11 + strlen(ios_token_encode) + 50;
+	char *request_data = (char *)calloc(1, request_data_len) ;
+	if (request_data == NULL) {
+		log_error("calloc fail for request_data");
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+
+		goto FAIL;
+	}
+
+	snprintf(request_data, request_data_len, "account=%s&password=%s&ios_token=%s&get_friend_list=%d", account_encode, password_encode, ios_token_encode, get_friend_list);
+	log_debug("request data:%s\n", request_data);
+
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_data);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _recive_data_from_http_api);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curl_result_t);  // 传这个参数过去
+
+	ret = curl_easy_perform(curl);
+	if(ret != CURLE_OK) {
+		log_error("curl_easy_perform() failed:%s, url:%s", curl_easy_strerror(ret), url);
+
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+	} else {
+		if (curl_result_t.str) {
+			log_info("request url:%s response:[%d]%s", url, curl_result_t.len, curl_result_t.str);
+
+			// return is json data
+			presult = (char *)calloc(1, curl_result_t.len + 1);
+			if (presult == NULL) {
+				log_error("calloc presult fail:%s", strerror(errno));
+				goto FAIL;
+			}		
+			*result_len = snprintf(presult, curl_result_t.len + 1, "%s", curl_result_t.str);
+
+			goto SUCC;
+		}
+	}
+
+
+
+FAIL:
+	clean_mem_buf(curl_result_t.str);
+	curl_result_t.len = 0;
+	curl_result_t.size = 0;
+
+	clean_mem_buf(account_encode);
+	clean_mem_buf(password_encode);
+	clean_mem_buf(ios_token_encode);
+
+	clean_mem_buf(request_data);
+
+	return NULL;
+
+
+SUCC:
+	clean_mem_buf(curl_result_t.str);
+	curl_result_t.len = 0;
+	curl_result_t.size = 0;
+
+	clean_mem_buf(account_encode);
+	clean_mem_buf(password_encode);
+	clean_mem_buf(ios_token_encode);
+
+	clean_mem_buf(request_data);
+
+	return presult;
+}
+
+
+int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token, char *tuid, char *tios_token, char *queue_type, char *queue_file)
+{
+    log_debug("quar_mysql:%s mysql_user:%s mysql_pass:%s mysql_db:%s mysql_port:%d", config_st.mysql_host, config_st.mysql_user, config_st.mysql_passwd, config_st.mysql_db, config_st.mysql_port);
+
+    MYSQL mysql, *mysql_sock;
+    MYSQL_RES* res = NULL;
+    char sql[5 * MAX_LINE] = {0};
+    
+    mysql_init(&mysql);
+    if (!(mysql_sock = mysql_real_connect(&mysql, config_st.mysql_host, config_st.mysql_user, config_st.mysql_passwd, config_st.mysql_db, config_st.mysql_port, NULL, 0))) {
+        log_error("connect mysql fail");
+        return 1;
+    }   
+    
+    // addslash
+    char mysql_tag_type[MAX_LINE] = {0}; 
+    char mysql_fnick[MAX_LINE] = {0}; 
+    char mysql_fios_token[MAX_LINE] = {0}; 
+    char mysql_tios_token[MAX_LINE] = {0}; 
+    char mysql_queue_type[MAX_LINE] = {0}; 
+    char mysql_queue_file[MAX_LINE] = {0}; 
+
+    mysql_real_escape_string(mysql_sock, mysql_tag_type, tag_type, strlen(tag_type));
+    mysql_real_escape_string(mysql_sock, mysql_fnick, fnick, strlen(fnick));
+    mysql_real_escape_string(mysql_sock, mysql_fios_token, fios_token, strlen(fios_token));
+    mysql_real_escape_string(mysql_sock, mysql_tios_token, tios_token, strlen(tios_token));
+    mysql_real_escape_string(mysql_sock, mysql_queue_type, queue_type, strlen(queue_type));
+    mysql_real_escape_string(mysql_sock, mysql_queue_file, queue_file, strlen(queue_file));
+    
+    snprintf(sql, sizeof(sql), "insert into liao_queue (tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file, expire) "
+                                                    "values ('%s', %d, '%s', '%s', %d, '%s', '%s', '%s', 0);",
+                                                    mysql_tag_type, atoi(fuid), mysql_fnick, mysql_fios_token, atoi(tuid), mysql_tios_token, mysql_queue_type, mysql_queue_file); 
+    log_debug("sql:%s", sql);
+    
+    if (mysql_query(mysql_sock, sql)) {
+        log_error("insert mysql liao_queue fail:%s", mysql_error(mysql_sock));
+        mysql_close(mysql_sock);
+    
+        return 1;
+    }   
+    
+    mysql_close(mysql_sock);
+    
+    return 0;
+}
+
+
 

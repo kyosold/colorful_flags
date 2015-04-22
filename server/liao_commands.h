@@ -7,6 +7,7 @@ void status_cmd(int sockfd, char *pbuf, size_t pbuf_size);
 //int sendtxt_cmd(int sockfd, char *pbuf, size_t pbuf_size);
 //int sendimg_cmd(int sockfd, char *pbuf, size_t pbuf_size);
 
+int login_cmd(struct clients *client_t, char *pbuf, size_t pbuf_size);
 int helo_cmd(int sockfd, char *pbuf, size_t pbuf_size, char *myuid, size_t myuid_size);
 int sendtxt_cmd(int sockfd, char *pbuf, size_t pbuf_size, char *mid, size_t mid_size, int client_idx);
 int sendimg_cmd(int sockfd, char *pbuf, size_t pbuf_size, char *mid, size_t mid_size, int client_idx, char *img_full_path, size_t img_full_path_size, char *img_name, size_t img_name_size);

@@ -4,6 +4,13 @@
 # 数据参数以空格分隔, key与value以冒号分隔,
 # 数据值或内容格式不定则用base64编码后发送.
 
+# 1.0 Login:
+LOGIN account:[account] password:[password] get_friend_list:1 \r\n\r\n
+
+# ex: LOGIN account:abalam password:123qwe ios_token:111 get_friend_list:1 \r\n\r\n
+
+# Server Response:
+# LOGIN OK
 
 
 # 1.1 register online:

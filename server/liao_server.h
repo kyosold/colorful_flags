@@ -7,6 +7,7 @@
 
 #define TAG_GREET		"GREET"
 #define TAG_HELO		"HELO"
+#define TAG_LOGIN		"LOGIN"
 #define TAG_SENDTXT		"SENDTXT"
 #define TAG_RECVTXT		"RECVTXT"
 #define TAG_SENDIMG		"SENDIMG"
@@ -20,6 +21,7 @@
 #define DATA_END		(u_char *) "\r\n"
 
 #define IMG_PATH		"/data1/htdocs/liao/api/data/"
+#define API_HTTP		"http://chat.vmeila.com/api"
 #define IMG_HOST		"http://chat.vmeila.com/api/data/"
 
 // default global config
@@ -30,7 +32,7 @@
 #define DEF_MCPORT      "11211"
 #define DEF_MCTIMEOUT   "5000"
 #define DEF_MAXWORKS    "512"
-#define DEF_QUEUEPATH	"/data1/htdocs/colorful-flag/api/data/"
+#define DEF_QUEUEPATH	"/data1/htdocs/colorful_flags/api/data/"
 #define DEF_QUEUEHOST	"http://chat.vmeila.com/api/data/"
 
 #define DEF_MYSQLSERVER "localhost"

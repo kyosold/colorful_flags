@@ -19,7 +19,8 @@ void reinit_data_without_free(struct data_st *data_st);
 int safe_write(struct clients *client, char *buf, size_t buf_size);
 
 void online_dump(dictionary *d, int fd);
-void send_apn_cmd(char *ios_token, char *fuid, char *fnick);
+int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *type);
+void send_apn_cmd(char *ios_token, char *fuid, char *fnick, char *type);
 
 //FILE *open_img_with_name(char *img_name, char *tuid, char *fn, size_t fn_size, char *img_full_path, size_t img_full_path_size);
 FILE *open_img_with_name(char *img_name, char *tuid, char *fn, size_t fn_size, char *img_full_path, size_t img_full_path_size, char *iname, size_t iname_size);
@@ -33,5 +34,11 @@ char *get_offline_msg_with_uid(char *myuid);
 
 int image_resize_v1(char *old_img, char *new_img, int w, int h, int compress_quality);
 int image_resize_without_scale(char *old_img, char *new_img, int compress_quality);
+
+char *login_http_api(char *url, char *account, char *password, char *ios_token, int get_friend_list, int *result_len);
+
+int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token, char *tuid, char *tios_token, char *queue_type, char *queue_file);
+
+void clean_mem_buf(char *buf);
 
 #endif
