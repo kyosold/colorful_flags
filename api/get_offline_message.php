@@ -5,13 +5,11 @@ include_once('utils.php');
 
 $page = 0;
 
-$name = trim(avoid_sql($_POST['name']));
 $uid = trim(avoid_sql($_POST['uid']));
-$page = trim(avoid_sql($_POST['page']));
 
 $res = array();
 
-if (strlen($name) > 0) {
+if (strlen($uid) > 0) {
 
 	$members = array();
 
@@ -26,24 +24,28 @@ if (strlen($name) > 0) {
     mysql_query("set names utf8");
     mysql_select_db(DB_NAME, $conn);
 	
-	$sql = "SELECT id, nickname, birthday, gender, ios_token, status, icon FROM liao_user WHERE nickname like '%{$name}%' AND id <> {$uid} LIMIT ". ($page * ROWS_OF_PAGE) .", ". ROWS_OF_PAGE;
+	$sql = "SELECT id, tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file FROM liao_queue WHERE tuid = {$uid} AND expire = 0 ORDER BY id";
 //echo $sql;
     $result = mysql_query($sql);
     while ($row = mysql_fetch_array($result)) {
-        mysql_close($conn);
         
         $data = array();
         $data['id'] = $row['id'];
-        $data['nickname'] = $row['nickname'];
-        $data['birthday'] = $row['birthday'];
-        $data['gender'] = $row['gender'];
-        $data['ios_token'] = $row['ios_token'];
-        $data['status'] = $row['status'];
-        $data['icon'] = get_avatar_url($row['id']);
+		$data['tag_type'] = $row['tag_type'];
+        $data['fuid'] = $row['fuid'];
+        $data['fnick'] = $row['fnick'];
+        $data['fios_token'] = $row['fios_token'];
+        $data['ficon'] = get_avatar_url($row['fuid']);
+        $data['tuid'] = $row['tuid'];
+        $data['tios_token'] = $row['tios_token'];
+        $data['queue_type'] = $row['queue_type'];
+        $data['queue_file'] = $row['queue_file'];
         
         $members[] = $data;
         
     }
+	mysql_close($conn);
+
 
 	$res = show_info('succ', '查询成功');
     $res['data'] = $members;
@@ -56,6 +58,9 @@ if (strlen($name) > 0) {
 	$res['status'] = 'fail';
 	$res['des'] = 'parameters error';
 }
+
+
+
 
 echo json_encode($res);
 

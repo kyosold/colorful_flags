@@ -35,5 +35,6 @@ define('4001', 'write database table [m_cure] fail');
 define('4002', 'delete database table [files] fail');
 define('4003', 'delete database table [files] fid is not valid');
 define('4004', 'can not create dir');
+define('4005', 'can not find request to make friend');
 
 ?>
