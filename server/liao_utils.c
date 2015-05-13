@@ -261,6 +261,13 @@ void reinit_data_without_free(struct data_st *data_st)
 	data_st->data_used = 0;
 }
 
+int get_avatar_url(char *uid, char *url, size_t url_size)
+{
+	int n = snprintf(url, url_size, "%s/%s/avatar/s_avatar.jpg", DEF_QUEUEHOST, uid);
+	return n;
+}
+
+
 
 // 说明:
 // 	该函数用于使用非阻塞写数据
@@ -325,7 +332,7 @@ int safe_write(struct clients *client, char *buf, size_t buf_size)
 }
 
 
-int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *type)
+int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *type, char *tuid)
 {
 	char b64_nick[MAX_LINE] = {0};
 	int b64_n = base64_decode(fnick, b64_nick, MAX_LINE);
@@ -359,10 +366,10 @@ int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *typ
 		return 1;		
 	}
 
-	int notice_size = strlen(type) + strlen(fuid) + strlen(fnick) + b64_size + 512;
+	int notice_size = strlen(type) + strlen(fuid) + strlen(fnick) + strlen(tuid) + b64_size + 512;
 	char *pnotice = (char *)calloc(1, notice_size);
 	if (pnotice != NULL) {
-		n = snprintf(pnotice, notice_size, "MESSAGENOTICE %s %s %s %s %s", type, fuid, fnick, pnotice_msg, DATA_END);
+		n = snprintf(pnotice, notice_size, "MESSAGENOTICE %s %s %s %s %s %s", type, fuid, fnick, tuid, pnotice_msg, DATA_END);
 
 		safe_write(client_t, pnotice, n);
 
@@ -377,10 +384,11 @@ int send_socket_cmd(struct clients *client_t, char *fuid, char *fnick, char *typ
 		
 }
 
-void send_apn_cmd(char *ios_token, char *fuid, char *fnick, char *type)
+
+void send_apn_cmd(char *ios_token, char *fuid, char *fnick, char *type, char *tuid)
 {
 	char cmd[MAX_LINE] = {0};
-	snprintf(cmd, sizeof(cmd), "./push.php '%s' '%s' '%s' '%s'", ios_token, fuid, fnick, type);
+	snprintf(cmd, sizeof(cmd), "./push.php '%s' '%s' '%s' '%s' '%s'", ios_token, fuid, fnick, type, tuid);
 	log_debug("APN CMD: %s", cmd);
 
 	FILE *fp;
@@ -475,7 +483,7 @@ FILE *open_img_with_name(char *img_name, char *tuid, char *fn, size_t fn_size, c
 
 
 // 返回: 
-// 		0:succ 其它: 失败
+// 	 -1: 失败, other: 写入的字节数
 // 这里有两个文件:
 // content.txt: 保存聊天消息
 // content_idx.txt: 保存聊天消息的索引:
@@ -497,7 +505,7 @@ int write_content_to_file_with_uid(char *tuid, char *content, size_t content_len
 	// 检查目录是否存在
 	if ( is_dir_exits(file_path) != 0) {
 		log_error("is_dir_exit fail");
-		return 1;
+		return -1;
 	}
 
 	(void)umask(033);
@@ -507,7 +515,7 @@ int write_content_to_file_with_uid(char *tuid, char *content, size_t content_len
 		n = snprintf(file_content, sizeof(file_content), "%s/%.5ld%.5u%.3d", file_path,  time(NULL), getpid(), seq++);
 		if (n <= 0) {
 			log_error("create file_content fail");
-			return 1;
+			return -1;
 		}	
 
 		if (access(file_content, F_OK) == 0 ) {
@@ -530,18 +538,18 @@ int write_content_to_file_with_uid(char *tuid, char *content, size_t content_len
 		log_error("fwrite to file:%s fail:%s", file_content, strerror(errno));
 		
 		fclose(fp);
-		return 1;	
+		return -1;	
 	}
 
 	fclose(fp);
 	fp = NULL;
 
-	n = snprintf(file_name, file_name_size, "%s", file_content);
+	snprintf(file_name, file_name_size, "%s", file_content);
 
-	return 0;
+	return content_len;
 }
 
-int write_content_to_file_with_path(char *file_path, char *content, size_t content_len, char *file_name, size_t file_name_size)
+int write_content_to_file_with_path(char *file_path, char *old_name, char *content, size_t content_len, char *file_name, size_t file_name_size)
 {
 	FILE *fp = NULL;
 	int i = 0;
@@ -555,23 +563,27 @@ int write_content_to_file_with_path(char *file_path, char *content, size_t conte
 	// 检查目录是否存在
 	if ( is_dir_exits(file_path) != 0) {
 		log_error("is_dir_exit fail");
-		return 1;
+		return -1;
 	}
 
 	(void)umask(033);
 	srandom(time(NULL));
 
 	for (i= 0; i< 100; i++) {
-		n = snprintf(file_name, file_name_size, "%.5ld%.5u%.3d", time(NULL), getpid(), seq++);
+		if (*old_name && (strlen(old_name) > 0)) {
+			n = snprintf(file_name, file_name_size, "%.5ld%.5u%.3d_%s", time(NULL), getpid(), seq++, old_name);
+		} else {
+			n = snprintf(file_name, file_name_size, "%.5ld%.5u%.3d", time(NULL), getpid(), seq++);
+		}
 		if (n <= 0) {
 			log_error("create file_name fail");
-			return 1;
+			return -1;
 		}
 
 		n = snprintf(file_full_path, sizeof(file_full_path), "%s/%s", file_path, file_name);
 		if (n <= 0) {
 			log_error("create file_content fail");
-			return 1;
+			return -1;
 		}	
 
 		if (access(file_full_path, F_OK) == 0 ) {
@@ -600,7 +612,7 @@ int write_content_to_file_with_path(char *file_path, char *content, size_t conte
 	fclose(fp);
 	fp = NULL;
 
-	return 0;
+	return content_len;
 }
 
 int has_offline_msg(char *myuid)
@@ -975,7 +987,10 @@ SUCC:
 }
 
 
-int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token, char *tuid, char *tios_token, char *queue_type, char *queue_file)
+// Return:
+//	-1: error
+//	other: mysql id
+int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token, char *tuid, char *tios_token, char *queue_type, char *queue_file, int queue_size)
 {
     log_debug("quar_mysql:%s mysql_user:%s mysql_pass:%s mysql_db:%s mysql_port:%d", config_st.mysql_host, config_st.mysql_user, config_st.mysql_passwd, config_st.mysql_db, config_st.mysql_port);
 
@@ -986,7 +1001,7 @@ int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token,
     mysql_init(&mysql);
     if (!(mysql_sock = mysql_real_connect(&mysql, config_st.mysql_host, config_st.mysql_user, config_st.mysql_passwd, config_st.mysql_db, config_st.mysql_port, NULL, 0))) {
         log_error("connect mysql fail");
-        return 1;
+        return -1;
     }   
     
     // addslash
@@ -1004,21 +1019,23 @@ int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token,
     mysql_real_escape_string(mysql_sock, mysql_queue_type, queue_type, strlen(queue_type));
     mysql_real_escape_string(mysql_sock, mysql_queue_file, queue_file, strlen(queue_file));
     
-    snprintf(sql, sizeof(sql), "insert into liao_queue (tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file, expire) "
-                                                    "values ('%s', %d, '%s', '%s', %d, '%s', '%s', '%s', 0);",
-                                                    mysql_tag_type, atoi(fuid), mysql_fnick, mysql_fios_token, atoi(tuid), mysql_tios_token, mysql_queue_type, mysql_queue_file); 
+    snprintf(sql, sizeof(sql), "insert into liao_queue (tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file, queue_size, expire) "
+                                                    "values ('%s', %d, '%s', '%s', %d, '%s', '%s', '%s', %d, 0);",
+                                                    mysql_tag_type, atoi(fuid), mysql_fnick, mysql_fios_token, atoi(tuid), mysql_tios_token, mysql_queue_type, mysql_queue_file, queue_size); 
     log_debug("sql:%s", sql);
     
     if (mysql_query(mysql_sock, sql)) {
         log_error("insert mysql liao_queue fail:%s", mysql_error(mysql_sock));
         mysql_close(mysql_sock);
     
-        return 1;
+        return -1;
     }   
+
+	int mid = mysql_insert_id(mysql_sock);
     
     mysql_close(mysql_sock);
     
-    return 0;
+    return mid;
 }
 
 

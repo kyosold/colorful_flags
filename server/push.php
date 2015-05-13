@@ -13,7 +13,7 @@ $passphrase = '123qwe';
 $apnTestServer = 'ssl://gateway.sandbox.push.apple.com:2195';
 $apnserver = 'ssl://gateway.push.apple.com:2195';
 
-if ($argc != 5) {
+if ($argc != 6) {
 	echo "push.php param error";
 	return;
 }
@@ -22,6 +22,7 @@ $deviceToken = $argv[1];
 $fuid = $argv[2];
 $fnick = $argv[3];
 $ftype = $argv[4];
+$tuid = $argv[5];
 $message = '您收到一条来自 '. base64_decode($fnick) .' 的消息';
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,6 +46,7 @@ $body['aps'] = array(
 	'fuid'	=> $fuid,
 	'fnick' => $fnick,
 	'type' => $ftype,
+	'tuid' => $tuid,
 	'alert' => $message,
 	'sound' => 'default'
 	);

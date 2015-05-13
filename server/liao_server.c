@@ -783,6 +783,7 @@ int main(int argc, char **argv)
 				// 读取内容 ----------------------
 				pbuf_len = 0;
 				memset(pbuf, 0, pbuf_size);
+				log_debug("pbuf_size:%d", pbuf_size);
 
 				int is_read_fail = 0;
 				while ((nread = read(sockfd, pbuf + pbuf_len, (pbuf_size - pbuf_len))) > 0) {
@@ -828,6 +829,7 @@ int main(int argc, char **argv)
 					continue;
 				}
 
+/*
 				// 每次命令以\r\n\r\n结束
 				if ( (pbuf[pbuf_len-4] == '\r') 
 					&& (pbuf[pbuf_len-3] == '\n')
@@ -838,6 +840,7 @@ int main(int argc, char **argv)
 				} else {
 					continue;
 				}
+*/
 
 				log_debug("recv from fd[%d] message body:[%d]%s", sockfd, pbuf_len, pbuf);
 
@@ -918,6 +921,7 @@ int main(int argc, char **argv)
 					&& (*(recv_pdt->data + (recv_pdt->data_len - 3)) == '\n')
 					&& (*(recv_pdt->data + (recv_pdt->data_len - 2)) == '\r')
 					&& (*(recv_pdt->data + (recv_pdt->data_len - 1)) == '\n') ) {
+					log_debug("client_st[%d]: data len[%d] data size[%d] Command Buffer Finish", ci, recv_pdt->data_len, recv_pdt->data_size);
 				
 					recv_pdt->data_len -= 4;
 					*(recv_pdt->data + recv_pdt->data_len) = '\0';
@@ -1005,7 +1009,7 @@ int main(int argc, char **argv)
 					}
 				}
 
-				epoll_event_mod(sockfd, EPOLLIN);
+				epoll_event_mod(sockfd, EPOLLIN | EPOLLET);
 
 				continue;
 

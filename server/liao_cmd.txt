@@ -80,12 +80,14 @@ SENDIMG mid:[msg id] fuid:[from id] fios_token:[from ios_token] fnick:[from nick
 
 ############################################################
 
-# 2.1 receiver txt message
-RECVTXT fuid:[from id] fnick:[from nickname] message:[msg length]:[msg body]\r\n
+# 1.4 send audio message
+SENDAUDIO mid:[msg id] fuid:[from id] fios_token:[from ios_token] fnick:[from nickname] tuid:[to id] tios_token:[to ios_token] file_name:[image name] message:[msg]\r\n\r\n
 
 # nick: is base64 encode
 # msg: is base64 encoded
 
+# ex:
+# SENDAUDIO mid:400001429860884033 fuid:26 fios_token:e81bf81e5c74724cd44f0fe72524a52f27f8d567030c91053671256e2edbd9b7 fnick:5bCP54aK tuid:27 tios_token:e81bf81e5c74724cd44f0fe72524a52f27f8d567030c91053671256e2edbd9b7 file_name:1429860634.spx message:AAAADU9n
 
 
 
