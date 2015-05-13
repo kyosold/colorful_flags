@@ -24,8 +24,7 @@ if (strlen($uid) > 0) {
     mysql_query("set names utf8");
     mysql_select_db(DB_NAME, $conn);
 	
-	//$sql = "SELECT u.id as uid, u.nickname as nickname, u.birthday as birthday, u.gender as gender, u.ios_token as ios_token, r.status as status FROM liao_user AS u, liao_relationship AS r WHERE u.id IN (SELECT fid FROM liao_relationship WHERE myid = {$uid})";
-	$sql = "SELECT u.id as uid, u.nickname as nickname, u.birthday as birthday, u.gender as gender, u.ios_token as ios_token, r.status as status FROM liao_user AS u, liao_relationship AS r WHERE u.id = r.fid AND r.myid = {$uid}";
+	$sql = "SELECT u.id as uid, u.nickname as nickname, u.birthday as birthday, u.gender as gender, u.ios_token as ios_token, r.pid as pid, r.status as status FROM liao_user AS u, liao_relationship AS r WHERE u.id = r.fid AND r.myid = {$uid}";
 //echo $sql;
     $result = mysql_query($sql);
     while ($row = mysql_fetch_array($result)) {
@@ -35,6 +34,7 @@ if (strlen($uid) > 0) {
         $friend_data['birthday'] = $row['birthday'];
         $friend_data['gender'] = $row['gender'];
         $friend_data['ios_token'] = $row['ios_token'];
+        $friend_data['pid'] = $row['pid'];
         $friend_data['status'] = $row['status'];
         $friend_data['icon'] = get_avatar_url($row['uid']);
 

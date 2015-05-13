@@ -25,6 +25,8 @@ define('DB_NAME', 'liao');
 // Other Info
 define('ROWS_OF_PAGE', 50);
 
+define('MAX_PWD_NUM_NOR', 3);
+
 // Error Code
 define('2000', 'connect database fail');
 define('2001', 'query database fail');
@@ -36,5 +38,6 @@ define('4002', 'delete database table [files] fail');
 define('4003', 'delete database table [files] fid is not valid');
 define('4004', 'can not create dir');
 define('4005', 'can not find request to make friend');
+define('4006', 'can not find account from liao_pwds');
 
 ?>

@@ -55,8 +55,8 @@ function add_friend($type, $myid, $fid) {
     }
     unset($result);
     
-    $sql = "INSERT INTO liao_relationship (myid, fid, status) ";
-    $sql .= " VALUES ('{$myid}', '{$fid}', '{$nickname}', 0) ";
+    $sql = "INSERT INTO liao_relationship (myid, fid, pid, status) ";
+    $sql .= " VALUES ('{$myid}', '{$fid}', '{$nickname}', 0, 0) ";
     if (!mysql_query($sql, $conn)) {
         mysql_close($conn);
 

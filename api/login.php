@@ -17,6 +17,8 @@ if ((strlen($account) > 0) &&
 	$password = md5($password); 
 
 	$mydata = array();
+	$uid = 0;
+	$pid = 0;
     
     $conn = mysql_connect(DB_HOST, DB_USER, DB_PWD);
     if (!$conn) {
@@ -28,13 +30,30 @@ if ((strlen($account) > 0) &&
 
     mysql_query("set names utf8");
     mysql_select_db(DB_NAME, $conn);
+
+	// 认证
+	$sql = "SELECT id, uid FROM liao_pwds WHERE account = '{$account}' and passwd = '{$password}' LIMIT 1";
+	$result = mysql_query($sql);
+	if ($row = mysql_fetch_array($result)) {
+		$pid = $row['id'];
+		$uid = $row['uid'];
+	}
+	unset($result);
+
+	if ($uid <= 0) {
+		mysql_close($conn);
+		$res = show_info('fail', '登录失败, 帐号或密码错误');
+		echo json_encode($res);
+		return 0;
+	}
 	
-	$sql = "SELECT id, account, nickname, birthday, gender, ios_token, status FROM liao_user WHERE account = '{$account}' and password = '{$password}' LIMIT 1";
+	// 查询用户信息
+	$sql = "SELECT nickname, birthday, gender, ios_token, status FROM liao_user WHERE id = '{$uid}' LIMIT 1";
     $result = mysql_query($sql);
     if ($row = mysql_fetch_array($result)) {
     	if ($row['ios_token'] != $devToken) {
     		// 更新ios_token
-    		$sql = "UPDATE liao_user SET ios_token = '{$devToken}' WHERE id = ". $row['id'] . " LIMIT 1";
+    		$sql = "UPDATE liao_user SET ios_token = '{$devToken}' WHERE id = ". $uid . " LIMIT 1";
     		
     		if (!mysql_query($sql, $conn)) {
     			mysql_close($conn);
@@ -46,13 +65,14 @@ if ((strlen($account) > 0) &&
     		}
     	}
     
-        $mydata['id'] = $row['id'];
+        $mydata['id'] = $uid;
+        $mydata['pid'] = $pid;
         $mydata['account'] = $row['account'];
         $mydata['nickname'] = $row['nickname'];
         $mydata['birthday'] = $row['birthday'];
         $mydata['gender'] = $row['gender'];
         $mydata['status'] = $row['status'];
-        $mydata['icon'] = get_avatar_url($row['id']);
+        $mydata['icon'] = get_avatar_url($uid);
 
     } else {
     	mysql_close($conn);
@@ -64,8 +84,9 @@ if ((strlen($account) > 0) &&
     }
 	unset($result);
 
+	// 查询好友信息
 	$friends = array();
-	$sql = "SELECT u.id as uid, u.nickname as nickname, u.birthday as birthday, u.gender as gender, u.ios_token as ios_token, r.status as status FROM liao_user AS u, liao_relationship AS r WHERE u.id = r.fid AND r.myid = {$mydata['id']}";
+	$sql = "SELECT u.id as uid, u.nickname as nickname, u.birthday as birthday, u.gender as gender, u.ios_token as ios_token, r.pid as pid, r.status as status FROM liao_user AS u, liao_relationship AS r WHERE u.id = r.fid AND r.myid = {$mydata['id']}";
 	$result = mysql_query($sql);
 	while ($row = mysql_fetch_array($result)) {
 		$friend_data = array();
@@ -74,6 +95,7 @@ if ((strlen($account) > 0) &&
 		$friend_data['birthday'] = $row['birthday'];
 		$friend_data['gender'] = $row['gender'];
 		$friend_data['ios_token'] = $row['ios_token'];
+		$friend_data['pid'] = $row['pid'];
 		$friend_data['status'] = $row['status'];
 		$friend_data['icon'] = get_avatar_url($row['uid']);
 

@@ -50,10 +50,11 @@ if (strlen($qid) > 0) {
 
 
 	if ($action == "add") {
-		$sql = "INSERT INTO liao_relationship (myid, fid, status) VALUES ";
-		$sql .= "({$myid}, {$fid}, 0), ({$fid}, {$myid}, 0);";	
+		$sql = "INSERT INTO liao_relationship (myid, fid, pid, status) VALUES ";
+		$sql .= "({$myid}, {$fid}, 0, 0), ({$fid}, {$myid}, 0, 0);";	
 
 		if (!mysql_query($sql, $conn)) {
+			mysql_query("UPDATE liao_queue SET expire = 0 WHERE id = {$qid} LIMIT 1", $conn);
 			mysql_close($conn);
 			$res = show_info('fail', '系统出错(2001)，请稍候重试 :)');
 			echo json_encode($res);

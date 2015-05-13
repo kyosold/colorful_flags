@@ -36,7 +36,7 @@ if ((strlen($account) > 0) &&
     mysql_query("set names utf8");
     mysql_select_db(DB_NAME, $conn);
 	
-	$sql = "SELECT id FROM liao_user WHERE account = '{$account}' LIMIT 1";
+	$sql = "SELECT id FROM liao_pwds WHERE account = '{$account}' LIMIT 1";
     $result = mysql_query($sql);
     if ($row = mysql_fetch_array($result)) {
         mysql_close($conn);
@@ -48,8 +48,9 @@ if ((strlen($account) > 0) &&
     }
     unset($result);
     
-    $sql = "INSERT INTO liao_user (account, password, nickname, birthday, gender, ios_token, status, icon) ";
-    $sql .= " VALUES ('{$account}', '{$password}', '{$nickname}', '{$birthday}', $gender, '{$devToken}', 0, '') ";
+	// 注册用户信息
+    $sql = "INSERT INTO liao_user (nickname, birthday, gender, ios_token, status, icon) ";
+    $sql .= " VALUES ('{$nickname}', '{$birthday}', $gender, '{$devToken}', 0, '') ";
     if (!mysql_query($sql, $conn)) {
         mysql_close($conn);
 
@@ -62,6 +63,22 @@ if ((strlen($account) > 0) &&
     $affected_rows = mysql_affected_rows();
 
 	$uid = mysql_insert_id();
+
+	// 注册用户帐号
+	$sql = "INSERT INTO liao_pwds (account, passwd, uid) VALUES ('{$account}', '{$password}', {$uid}) ";
+	if (!mysql_query($sql, $conn)) {
+		// 回滚
+
+		$sql = "DELETE FROM liao_user WHTERE id = {$uid} LIMIT 1";
+		mysql_query($sql, $conn);
+
+		mysql_close($conn);
+
+		$res = show_info('fail', '系统出错(2001)，请稍候重试 :)');
+		echo json_encode($res);
+
+		return 0;
+	}	
 
     mysql_close($conn);
 
