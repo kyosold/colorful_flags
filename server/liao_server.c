@@ -481,20 +481,22 @@ int client_close(int sockfd)
 	log_debug("fd[%d] closed", sockfd);
 
 	// client close
-	int i = get_idx_with_sockfd(sockfd);
-	if (i == -1) {
-		log_error("get index failed: i[%d] = get_idx_with_sockfd(%d)", i, sockfd);
-		return 1;
-	}
+    int i = get_idx_with_sockfd(sockfd);
+    if (i == -1) {
+        log_error("get index failed: i[%d] = get_idx_with_sockfd(%d)", i, sockfd);
+        return 1;
+    }  	
+	log_debug("fd[%d] client_st[%d].uid=%s", sockfd, i, client_st[i].uid);
 
 	// 注册为离线   (uid => ios_token)
 	dictionary_unset(online_d, client_st[i].uid);
-
-	// 回收与初始化当前item
-	init_clientst_item_with_idx(i);
+	log_debug("fd[%d] set uid[%s] offline", sockfd, client_st[i].uid);
 
 	// 关闭客户端fd
 	close(sockfd);
+
+	// 回收与初始化当前item
+	init_clientst_item_with_idx(i);
 
 	return 0;
 }
@@ -819,7 +821,8 @@ int main(int argc, char **argv)
 				}
 
                 if (nread == -1 && errno != EAGAIN) {
-					log_error("read fd[%d] failed:[%d]%s", sockfd, errno, strerror(errno));
+					//log_error("read fd[%d] failed:[%d]%s", sockfd, errno, strerror(errno));
+					client_close(sockfd);
 					continue;
                 }
 
@@ -913,6 +916,11 @@ int main(int argc, char **argv)
 					cn = snprintf(recv_pdt->data + recv_pdt->data_len, (recv_pdt->data_size - recv_pdt->data_len), "%s", pbuf);
 					recv_pdt->data_len += cn;
 					*(recv_pdt->data + recv_pdt->data_len) = '\0';
+				}
+
+				// debug
+				if ( strncasecmp(recv_pdt->data, "SYSADMIN ", 9) == 0 ) {
+					online_dump(online_d, sockfd);
 				}
 
 				// check buffer is end

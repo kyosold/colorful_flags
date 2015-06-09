@@ -1018,10 +1018,18 @@ int write_queue_to_db(char *tag_type, char *fuid, char *fnick, char *fios_token,
     mysql_real_escape_string(mysql_sock, mysql_tios_token, tios_token, strlen(tios_token));
     mysql_real_escape_string(mysql_sock, mysql_queue_type, queue_type, strlen(queue_type));
     mysql_real_escape_string(mysql_sock, mysql_queue_file, queue_file, strlen(queue_file));
+
+	// get current time
+	struct tm when;
+	time_t now_time;
+	time(&now_time);
+	when = *localtime(&now_time);
+	char cdate[21] = {0};
+	snprintf(cdate, sizeof(cdate), "%04d-%02d-%02d %02d:%02d:%02d\n", when.tm_year + 1900, when.tm_mon + 1, when.tm_mday, when.tm_hour, when.tm_min, when.tm_sec); 
     
-    snprintf(sql, sizeof(sql), "insert into liao_queue (tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file, queue_size, expire) "
-                                                    "values ('%s', %d, '%s', '%s', %d, '%s', '%s', '%s', %d, 0);",
-                                                    mysql_tag_type, atoi(fuid), mysql_fnick, mysql_fios_token, atoi(tuid), mysql_tios_token, mysql_queue_type, mysql_queue_file, queue_size); 
+    snprintf(sql, sizeof(sql), "insert into liao_queue (tag_type, fuid, fnick, fios_token, tuid, tios_token, queue_type, queue_file, queue_size, cdate, expire) "
+                                                    "values ('%s', %d, '%s', '%s', %d, '%s', '%s', '%s', %d, '%s', 0);",
+                                                    mysql_tag_type, atoi(fuid), mysql_fnick, mysql_fios_token, atoi(tuid), mysql_tios_token, mysql_queue_type, mysql_queue_file, queue_size, cdate); 
     log_debug("sql:%s", sql);
     
     if (mysql_query(mysql_sock, sql)) {

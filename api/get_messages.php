@@ -21,7 +21,7 @@ if ($qid <= 0) {
 
 $res = array();
 
-if (strlen($uid) > 0) {
+if ((strlen($uid) > 0) || (strlen($qid) > 0)) {
 
 	$msg_queue = array();
 
@@ -44,9 +44,17 @@ if (strlen($uid) > 0) {
 		//$sql = "SELECT id, fuid, fnick, tuid, cdate, queue_file, queue_type, queue_size, expire FROM liao_queue WHERE tuid = {$uid} AND fuid = {$fuid} AND expire = 0 AND id > {$qid} ORDER BY id ASC LIMIT {$number}";
 		$where = "WHERE tuid = {$uid} AND fuid = {$fuid} AND expire = 0 AND id > {$qid} ";	
 
-	} else {
+	} else if ($type == 'ALL') {
 		//$sql = "SELECT id, fuid, fnick, tuid, cdate, queue_file, queue_type, queue_size, expire FROM liao_queue WHERE (tuid = {$uid} OR fuid = {$uid}) AND (tuid = {$fuid} OR fuid = {$fuid}) AND (id > {$qid}) ORDER BY id ASC LIMIT {$number}";
 		$where = "WHERE (tuid = {$uid} OR fuid = {$uid}) AND (tuid = {$fuid} OR fuid = {$fuid}) AND (id > {$qid}) ";
+	
+	} else if ($type == 'QID') {
+		$where = "WHERE id = {$qid} ";
+		$number--;
+
+	} else if ($type == 'Previous') {
+		$where = "WHERE (tuid = {$uid} OR fuid = {$uid}) AND (tuid = {$fuid} OR fuid = {$fuid}) AND (id < {$qid}) ";
+		$number--;
 	}
 
 	// number + 1: 用于给客户端显示是否还有可用数据

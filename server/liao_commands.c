@@ -36,6 +36,12 @@ void commands(struct clients *client_t)
 	char rspsoneBuf[MAX_LINE * 2] = {0};
 	struct data_st *recv_pdt = client_t->recv_data;
 	if ((recv_pdt->data_len > 0) && (recv_pdt->data != NULL)) {
+
+		// SYSADMIN: 用于管理员调试
+		if ( strncasecmp(recv_pdt->data, "SYSADMIN ", 9) == 0 ) {
+			
+		}
+
 		
 		// LOGIN: 用于表示客户端登录 LOGIN account:abalam password:123qwe ios_token:111 get_friend_list:1 \r\n\r\n
 		if ( strncasecmp(recv_pdt->data, "LOGIN ", 6) == 0 ) {
@@ -89,6 +95,26 @@ void commands(struct clients *client_t)
 			return;
 		}
 
+		// QUIT: 用户退出
+		if ( strncasecmp(recv_pdt->data, "QUIT ", 5) == 0 ) {
+			char *pbuf = recv_pdt->data + 5;
+			int ret = quit_cmd(client_t, pbuf, strlen(pbuf));
+			/*
+			if (ret == 0) {
+				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s OK %s", TAG_QUIT, DATA_END);	
+			} else {
+				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s FAIL %s", TAG_QUIT, DATA_END);
+			}
+			*/
+
+			// init recv data
+			reinit_data_without_free(recv_pdt);
+
+			//safe_write(client_t, rspsoneBuf, strlen(rspsoneBuf));
+
+			return ;
+		}
+
 
 		// SENDADDFRDREQ: 发送请求加为好友信息
 		if ( strncasecmp(recv_pdt->data, "SENDADDFRDREQ ", 14) == 0 ) {
@@ -126,7 +152,7 @@ void commands(struct clients *client_t)
 			return;
 		}
 		
-		// SENDTXT: 发送送图片给对方
+		// SENDIMG: 发送送图片给对方
 		if ( strncasecmp(recv_pdt->data, "SENDIMG ", 8) == 0 ) {
 			char *pbuf = recv_pdt->data + 8;
 			char mid[MAX_LINE] = {0};
@@ -154,9 +180,9 @@ void commands(struct clients *client_t)
 			char audio_url[MAX_LINE] = {0};
 			int ret = sendaudio_cmd(client_t, pbuf, strlen(pbuf), mid, sizeof(mid), audio_url, sizeof(audio_url), qid, sizeof(qid));
 			if (ret == 0) {
-				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s OK %s %s %s%s", TAG_SENDAUDIO, mid, qid, audio_url, DATA_END); 
+				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s OK %s %s %s %s", TAG_SENDAUDIO, mid, qid, audio_url, DATA_END); 
 			} else {
-				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s FAIL %s %s %s%s", TAG_SENDAUDIO, mid, qid, audio_url, DATA_END);
+				snprintf(rspsoneBuf, sizeof(rspsoneBuf), "%s FAIL %s %s %s %s", TAG_SENDAUDIO, mid, qid, audio_url, DATA_END);
 			}
 			
 			// init recv data
@@ -483,8 +509,32 @@ int sendreq_addfriend(struct clients *client_t, char *pbuf, size_t pbuf_size, ch
 	
 	// 发送通知
 	log_debug("send notice message to tuid:%s", tuid);
+	char ficon[MAX_LINE] = {0};
+	get_avatar_url(fuid, ficon, sizeof(ficon));
 
-	send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+	// 检查收件人是否在线
+	char *pf_fd = dictionary_get(online_d, tuid, NULL);
+	if (pf_fd == NULL) {
+		// 收件人不在线，使用APN通知
+		log_debug("tuid:%s not online, use APNS send msg", tuid);
+		send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+	} else {
+		// 收件人在线，使用socket发送通知
+		int i = get_idx_with_uid(tuid);
+		log_debug("tuid:%s is online, use socket send message", tuid);
+		if ((i == -1) || (client_st[i].used != 1)) {
+			log_error("logic is error, i[%d] = get_idx_with_uid(%s), client_st[i].used=%d, use APN send notice", i, tuid, client_st[i].used);
+			
+			send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+		} else {
+			n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
+			if (n != 0) {
+				log_error("use send_socket_cmd send notice fail, use APN send");
+				send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+			}
+		}
+	}
+		
 
 	goto TXT_SUCC;
 	
@@ -628,11 +678,12 @@ int sendtxt_cmd(struct clients *client_t, char *pbuf, size_t pbuf_size, char *mi
 			log_error("logic is error, i[%d] = get_idx_with_uid(%s), client_st[i].used=%d, use APN send notice", i, tuid, client_st[i].used);
 			
 			send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
-		}
-		n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
-		if (n != 0) {
-			log_error("use send_socket_cmd send notice fail, use APN send");
-			send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+		} else {
+			n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
+			if (n != 0) {
+				log_error("use send_socket_cmd send notice fail, use APN send");
+				send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+			}
 		}
 	}
 
@@ -821,11 +872,12 @@ int sendimg_cmd(struct clients *client_t, char *pbuf, size_t pbuf_size, char *mi
             log_error("logic is error, i[%d] = get_idx_with_uid(%s), client_st[i].used=%d, use APN send notice", i, tuid, client_st[i].used);
     
             send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
-        }   
-        n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
-        if (n != 0) {
-            log_error("use send_socket_cmd send notice fail, use APN send");
-            send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+        } else {
+        	n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
+        	if (n != 0) {
+            	log_error("use send_socket_cmd send notice fail, use APN send");
+            	send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+			}
         }   
     }   
 	
@@ -1064,11 +1116,12 @@ int sendaudio_cmd(struct clients *client_t, char *pbuf, size_t pbuf_size, char *
             log_error("logic is error, i[%d] = get_idx_with_uid(%s), client_st[i].used=%d, use APN send notice", i, tuid, client_st[i].used);
     
             send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
-        }   
-        n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
-        if (n != 0) {
-            log_error("use send_socket_cmd send notice fail, use APN send");
-            send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+        } else {
+        	n = send_socket_cmd(&client_st[i], fuid, fnick, m_type, tuid);
+        	if (n != 0) {
+            	log_error("use send_socket_cmd send notice fail, use APN send");
+            	send_apn_cmd(tios_token, fuid, fnick, m_type, tuid);
+			}
         }   
     }   
 	
@@ -1105,8 +1158,10 @@ IMG_SUCC:
 } 
 
 // quit fuid:0000001 
-int quit_cmd(int sockfd, char *pbuf, size_t pbuf_size)
+//int quit_cmd(int sockfd, char *pbuf, size_t pbuf_size)
+int quit_cmd(struct clients *client_t, char *pbuf, size_t pbuf_size)
 {
+	int sockfd = client_t->fd;
 	log_debug("pbuf:%s", pbuf);
 	
 	// pbuf[uid:0000001]
@@ -1140,20 +1195,30 @@ int quit_cmd(int sockfd, char *pbuf, size_t pbuf_size)
 	
 	// 设置离线
 	// 查询fd
-	int i = get_idx_with_uid(fuid);
+	int i = get_idx_with_sockfd(sockfd);
 	if (i == -1) {
-		log_error("get index failed: i[%d] = get_idx_with_uid(%s)", i, fuid);
+		log_error("get index failed: i[%d] = get_idx_with_sockfd(%d)", i, sockfd);
+		return 1;
+	}
+	if (strcasecmp(client_st[i].uid, fuid) != 0) {
+		log_error("logic error client_st[%d].uid=%s != fuid=%s", i, client_st[i].uid, fuid);
 		return 1;
 	}
 
-	client_st[i].used = 0;
-	client_st[i].fd = 0;
-	memset(client_st[i].uid, '0', strlen(client_st[i].uid));
-	memset(client_st[i].ios_token, '0', strlen(client_st[i].ios_token));
+	//client_st[i].used = 0;
+	//client_st[i].fd = 0;
+	//memset(client_st[i].uid, '0', strlen(client_st[i].uid));
+	//memset(client_st[i].ios_token, '0', strlen(client_st[i].ios_token));
 	
 	// 注册为离线	(uid => ios_token)
 	dictionary_unset(online_d, fuid);
-	log_error("offline failed fuid[%s] sockfd[%d]", fuid, sockfd);
+	log_error("offline fuid[%s] sockfd[%d]", fuid, sockfd);
+
+	// 关闭客户端fd
+	close(sockfd);	
+
+	// 回收与初始化当前item
+	init_clientst_item_with_idx(i);
 	
 	
 	return 0;
