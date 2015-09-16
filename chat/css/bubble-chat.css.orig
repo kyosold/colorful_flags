@@ -1,0 +1,125 @@
+body {
+  padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+
+html,
+body {
+  height: 100%;
+  background-image: url("../img/lghtmesh.png");
+  /* The html and body elements cannot have any padding or margin. */
+}
+
+/* Wrapper for page content to push down footer */
+#wrap {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  /* Negative indent footer by it's height */
+  margin: 0 auto -60px;
+}
+
+/* Set the fixed height of the footer here */
+#push,
+#footer {
+  height: 60px;
+}
+#footer {
+  background-color: #f5f5f5;
+}
+
+/* Lastly, apply responsive CSS fixes as necessary */
+@media (max-width: 767px) {
+  #footer {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+.progress {
+  height: 40px;
+  text-align: center;
+  font-size: 30px;
+  line-height: 100%;
+  margin-top:20px;
+  margin-top:20px;
+  margin-right:auto;
+  margin-left:-30px;
+  width: 100%;
+}
+
+.timer {
+  font-size:35px;
+  line-height:80px;
+  font-weight:bold;
+  color:red;
+  margin-right:-20px;
+  //text-align:right;
+}
+
+.current-question {
+  height:40px;
+  margin-left: auto%;
+  font-weight:bold;
+  font-size:30px;
+  float: left;
+}
+
+.current-question.text {
+  font-size:22px;
+  float: right;
+}
+
+.current-question container {
+  overflow: hidden;
+}
+.current-question.container {
+  /*margin: auto;*/
+<<<<<<< HEAD
+=======
+}
+
+/* question background */
+.qbackground {
+    background-color: #FFE673;
+}
+
+/* plus-button and minus-button didn't really work but leaving them here for now */
+.plus-button {
+    /*     background-color: #FF0000;
+    color: rgba(255, 255, 255, 1) */
+    background-image: -moz-linear-gradient(top, #10D010, #10D010);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#10D010), to(#10D010));
+    width: 30px;
+}
+
+.minus-button {
+    /*     background-color: #10D010; */
+    /*     color: rgba(0,0,255,0)	 */
+    background-image: -moz-linear-gradient(top, #FF0000, #FF0000);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#FF0000), to(#FF0000));
+    width: 30px;
+}
+
+.navbar .brand {
+  font-style: italic;
+  font-size: 30px;
+  font-family: Papyrus, fantasy;
+}
+
+.box {
+  width: 220px;
+  height: 200px;
+  margin: 10px;
+  float: left;
+  border: 1px solid black;
+}
+
+.questions {
+  margin: 30px;
+>>>>>>> f0b67193fa4fb22205d9e36ff58edfd86677848d
+}

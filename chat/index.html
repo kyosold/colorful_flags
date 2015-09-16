@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta charset="utf-8">
+    <title>影聊 Web</title>
+	<!-- Bootstrap -->
+	<link href="css/bootstrap.css" rel="stylesheet" media="screen">
+	<link href="css/bootstrap-responsive.css" rel="stylesheet" media="screen">
+	<link href="css/liao_load.css" rel="stylesheet" media="screen">
+	<!-- Emoji Data >
+	<link rel="stylesheet" type="text/css" href="css/jquery.emojipicker.css">
+	<link rel="stylesheet" type="text/css" href="css/jquery.emojipicker.a.css">
+	<link rel="stylesheet" type="text/css" href="css/emoji.css"-->
+
+	<link rel="stylesheet" href="style.css">
+
+	<style type="text/css">
+	  /*@import "http://fonts.googleapis.com/css?family=Source+Sans+Pro";*/
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+        /*background-color: #f5f5f5;*/
+		font-family: "Source Sans Pro",sans-serif;
+      }
+
+	  .sidebar-nav {
+		padding: 9px 0;
+	  }
+
+      .form-signin {
+        max-width: 300px;
+        padding: 19px 29px 29px;
+        margin: 0 auto 20px;
+        background-color: #fff;
+        border: 1px solid #e5e5e5;
+        -webkit-border-radius: 5px;
+           -moz-border-radius: 5px;
+                border-radius: 5px;
+        -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+           -moz-box-shadow: 0 1px 2px rgba(0,0,0,.05);
+                box-shadow: 0 1px 2px rgba(0,0,0,.05);
+      }
+      .form-signin .form-signin-heading,
+      .form-signin .checkbox {
+        margin-bottom: 10px;
+      }
+      .form-signin input[type="text"],
+      .form-signin input[type="password"] {
+        font-size: 16px;
+        height: auto;
+        margin-bottom: 15px;
+        padding: 7px 9px;
+      }
+
+    </style>
+
+	<!-- sj add -->
+	<style>
+		#loginDIV {
+			display: block;  
+			position: absolute;  
+			top: 25%;  
+			left: 35%;  
+			padding: 8px;  
+			border: 8px 
+			solid #E8E9F7;  
+			background-color: white;  
+			z-index:1002;  
+			overflow: auto;
+		}	
+
+		#friendsSideBar {
+			height:550px; 
+			overflow-y:auto;
+			overflow-x:hidden;
+		}
+
+		#chatDialog {
+			background-color: #eeeeee; 
+			padding-left: 60px; 
+			padding-right: 60px; 
+			border-radius: 6px; 
+			height:550px; 
+			overflow-y:auto;
+		}
+
+		.liaoDialog {
+			padding-top: 30px;
+			padding-left: 0;
+			padding-right: 0;
+			border-radius: 6px;
+			height: 200px;
+			float: left;
+		}
+
+		.liaoTextArea {
+			float: left;
+			margin-right: 2em;
+			width: 90%;
+		}
+		.liaoInputButton {
+			margin-top: 3em;
+		}
+
+		#firendDiv {
+			padding-left: 0px;
+			padding-right: 0px;
+	  	}
+
+		/* 好友列表被选中 */
+		.selected {
+  			background-color: #FFF;
+  			box-shadow: 0 1px 1px 0 rgba(230, 230, 230, 0.3) inset, 0 -1px 1px 0 rgba(230, 230, 230, 0.3) inset;
+		}
+
+		.friend-nav-list {
+			cursor: pointer;
+			left: 0;
+			right: 0;
+			margin: 0;
+			padding: 0;
+
+			box-sizing: border-box;
+			padding: .5em .5em;
+			width: 100%;
+			border-bottom: 1px solid #E3E3E3;
+			overflow-x: hidden;
+		}
+
+	  	.friend_avatar {
+			position: relative;
+			display: block;
+			float: left;
+			width: 2.5em;
+			height: 2.5em;
+			border-radius: .3em;
+			margin: 0 .5em 0 0;
+			overflow: hidden;
+	  	}
+
+		.meta {
+			white-space: nowrap;
+		}
+		.meta__sub, .meta__sub--dark, .meta__sub--light {
+			font-size: .8em;
+		}
+		.meta__sub--dark {
+			color: #8D8D8D;
+		}
+		.meta__sub--light {
+			color: #A5A5A4;
+		}
+
+		.status_indicator_unread {
+			content: "";
+			background-color: #5383e3;
+
+			border-radius: 100%;
+    		display: block;
+			float: left;
+			height: 8px;;
+			width: 8px;
+			overflow: hidden;
+			position: relative;
+
+			left: 0.5em;
+			margin-top: 1.5em;
+			margin-right: 0.5em;
+		}
+
+
+    </style>
+
+  </head>
+  <body>
+
+	<!-- login Modal -->
+	<div id="loginModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true" data-backdrop="static">
+		<div class="modal-header">
+			<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+			<h3 id="loginModalLabel">登录验证</h3>
+		  </div>
+
+		<div class="modal-body">
+		  <form class="form-signin">
+			<h2 class="form-signin-heading">请登录</h2>
+			<input id="username" type="text" placeholder="帐号" class="input-block-level">
+			<input id="passwd" type="password" placeholder="密码" class="input-block-level">
+			<label class="checkbox">
+			  <input type="checkbox" value="remember-me" id="remember"> 记住账号
+			</label>
+			<!--button type="submit" class="btn btn-large btn-primary">Sign in</button-->
+		  </form>
+		</div>
+
+		<div class="modal-footer">
+    		<button class="btn" data-dismiss="modal" aria-hidden="true">取消</button>
+    		<button class="btn btn-primary" onclick="submitLogin();">登录</button>
+  		</div>
+    </div>
+
+	<!-- load Modal -->
+	<div id="loadModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="loadModalLabel" aria-hidden="true" data-backdrop="static">
+		<div class="modal-header">
+    		<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    		<h3 id="loadModalLabel">处理中...</h3>
+  		</div>
+		<div class="modal-body">
+			<div class="sk-circle">
+			  <div class="sk-circle1 sk-child"></div>
+			  <div class="sk-circle2 sk-child"></div>
+			  <div class="sk-circle3 sk-child"></div>
+			  <div class="sk-circle4 sk-child"></div>
+			  <div class="sk-circle5 sk-child"></div>
+			  <div class="sk-circle6 sk-child"></div>
+			  <div class="sk-circle7 sk-child"></div>
+			  <div class="sk-circle8 sk-child"></div>
+			  <div class="sk-circle9 sk-child"></div>
+			  <div class="sk-circle10 sk-child"></div>
+			  <div class="sk-circle11 sk-child"></div>
+			  <div class="sk-circle12 sk-child"></div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- nav -->
+	<div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+		<div class="container-fluid">          
+			<a data-target=".nav-collapse" data-toggle="collapse" class="btn btn-navbar">            
+				<span class="icon-bar"></span>            
+				<span class="icon-bar"></span>            
+				<span class="icon-bar"></span>          
+			</a>          
+			<a href="#" class="brand">Command:</a>          
+			<div class="nav-collapse collapse">            
+				<p class="navbar-text pull-right" id="loginStatus">              
+					<!--Logged in as 
+					<a class="navbar-link" href="#">Username</a>-->            
+				</p>            
+				<ul class="nav">              
+					<li class="active"><a href="#" id="output">Login account:abc password:123123 nickname...</a></li>              
+					<!--li><a href="#about">About</a></li>              
+					<li><a href="#contact">Contact</a></li-->            
+				</ul>          
+			</div><!--/.nav-collapse -->        
+		</div>
+      </div>
+    </div>
+
+	<!-- body -->
+	<div class="container-fluid">
+		<div class="row-fluid">
+			<!-- sidebar -->
+			<div class="span3">
+				<div class="well sidebar-nav" id="friendsSideBar">
+					<ul class="nav nav-list" id="firendDiv">
+						<li>
+							<i class="status_indicator_unread"></i>
+							<div class="friend-nav-list">
+								<figure class="friend_avatar">
+									<img src="http://sc.vmeila.com/api/data//44/avatar/s_avatar.jpg">
+								</figure>
+								<div class="meta">
+									<div class="meta__name">Tim Pietrusky</div>
+									<div class="meta__sub--dark">Browserhacks looks great!</div>
+								</div>
+							</div>
+						</li>
+
+						<li class="selected">
+							<i class=""></i>
+							<div class="friend-nav-list">
+								<figure class="friend_avatar">
+									<img src="http://sc.vmeila.com/api/data//44/avatar/s_avatar.jpg">
+								</figure>
+								<div class="meta">
+									<div class="meta__name">吴芳</div>
+									<div class="meta__sub--dark">Hi there :)</div>
+								</div>
+							</div>
+						</li>
+
+						<li>
+							<i class="status_indicator_unread"></i>
+							<div class="friend-nav-list">
+								<figure class="friend_avatar">
+									<img src="http://sc.vmeila.com/api/data//44/avatar/s_avatar.jpg">
+								</figure>
+								<div class="meta">
+									<div class="meta__name">宋健</div>
+									 <div class="meta__sub--dark">Ok!</div>	
+								</div>
+							</div>
+						</li>
+
+						<!--li class="nav-header">Sidebar</li>
+						<li class="active">
+						<li><a href="#">Link</a></li>
+						<li><a href="#">Link</a></li>
+						<li><a href="#">Link</a></li-->
+					</ul>
+				</div>
+			</div>
+
+			<!-- content -->
+			<div class="span9">
+				<div class="row-fluid">
+					<div class="span12" id="chatDialog">
+<!-- chat bubble -->
+<div class="chat-msg">
+    <img class="chat-msg__pic" src="https://avatars.githubusercontent.com/u/833377?v=3">
+
+    <p class="chat-msg__text">
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      Pellentesque aliquam fringilla lacus, sit amet pretium augue
+      sodales eu. In congue leo mauris, eget porttitor erat faucibus sed.
+    </p>
+ </div>
+  <div class="chat-msg">
+
+    <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+    <p class="chat-msg__text-right">
+      What did you just say?
+    </p>
+  </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic" src="https://avatars.githubusercontent.com/u/833377?v=3">
+
+      <p class="chat-msg__text">
+        Oh, sorry. My Latin Lock was on. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+    </div>
+    <div class="chat-msg">
+
+      <img class="chat-msg__pic-right" src="https://avatars.githubusercontent.com/u/2739321?v=3">
+
+      <p class="chat-msg__text-right">
+        ...good one. 
+      </p>
+	</div>
+
+
+			</div>
+
+		</div>
+
+
+				<div class="row-fluid liaoDialog" id="inputDialog">
+<!-- input -->
+<div class="input liaoTextArea">
+	<textarea id='inputTextarea' rows="3" class="emojiP" style="width: 100%;"></textarea>
+</div>
+<!--div class="inputEmoji">
+	<button id="emojiBTN" class="btn" >emoji trigger</button>
+</div-->
+<div class="liaoInputButton">
+	<button class="btn btn-success" type="button" onclick="sendMessage();">发送</button>
+</div>
+<!-- input -->
+				</div>
+	</div>
+
+    <!--script src="http://code.jquery.com/jquery-latest.js"></script-->
+	<script src="js/jquery.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+
+	<script src="js/jstorage.js"></script>
+
+	<!--script src="js/jquery.emojipicker.js"></script>
+	<script type="text/javascript" src="js/jquery.emojipicker.a.js"></script-->
+
+	<script src="js/jquery.base64.js"></script>
+	<script src="js/liao.js"></script>
+
+<script>
+
+	var output;
+
+	var wsUri = "ws://122.10.119.33:5027";
+	var websocket;
+
+	function init() {
+		cleanLiao();
+
+		output = $("#output")[0];
+
+		var rcb = $('#remember');
+        var userField = $('#username');
+
+        key = 'savedUsername';
+        username = $.jStorage.get(key);
+        if (username) {
+            userField.val(username);
+            rcb.prop('checked', true);
+            $('#passwd').focus();
+
+        } else {
+            userField.val('').focus();
+            rcb.prop('checked', false);
+        }
+
+		// 初始化emoji
+		/*$('.emojiP').emojiPicker({
+			height: '300px',
+			width: '450px',
+			button: false
+		});
+		$('#emojiBTN').click(function(e) {
+			e.preventDefault();
+			$('#inputTextarea').emojiPicker('toggle');
+		});*/
+
+		isSupportWebSocket();
+		showLoginDialog();
+
+		chatScrollLast();
+	}
+
+	function log(message) {
+		output.innerHTML = message;
+	}
+
+	function isSupportWebSocket() {
+		if (!window.WebSocket) {
+			log('此浏览器不支持WebSocket!');
+		} else {
+			log('WebSocket OK :)');
+		}
+	}
+
+	
+//////// WebSocket /////////////////
+	// 连接成功
+	function onOpen(evt) {
+		// 隐藏load
+		//hideLoadDialog();		
+
+		log('CONNECTED');	
+
+		// 发送认证信息
+		var user = $('#username')[0].value;
+		var pwd = $('#passwd')[0].value;
+		var login_cmd = get_login_cmd(user, pwd);
+		wsSend(login_cmd);	
+	}
+
+	function onClose(evt) { 
+		hideLoadDialog();
+        showLoginDialog(); 
+
+        log("DISCONNECTED"); 
+		
+		cleanLiao();	
+    } 
+
+	function onMessage(evt) { 
+		hideLoadDialog();
+
+		var res = evt.data;
+		res = res.substring(0, 100);
+		log(res+"...");
+
+		parse_response_data(evt.data);	
+	}
+
+	function onError(evt) {
+		hideLoadDialog();
+
+		log('<span style="color: red;">ERROR:</span> ' + evt.data);
+	}
+
+	function doSend(message) { 
+		hideLoadDialog();
+
+		log("SENT: " + message);
+	}
+
+	/////////////////
+	function wsConnect() {
+        try {
+            websocket = new WebSocket(wsUri);
+            websocket.onopen = function(evt) { onOpen(evt) }; 
+            websocket.onclose = function(evt) { onClose(evt) }; 
+            websocket.onmessage = function(evt) { onMessage(evt) }; 
+            websocket.onerror = function(evt) { onError(evt) }; 
+
+        } catch(e) {
+			hideLoadDialog();
+
+            writeToScreen('<span style="color: red;">ERROR:</span> new WebSocket: ' + wsUri + ' failed!');
+            return;
+
+        }
+    }
+
+	function wsClose() {
+        websocket.close();
+    }
+
+	function wsSend(message) {
+		//showLoadDialog();
+
+        websocket.send(message);
+    }
+
+	
+		
+
+
+/////// Logic ////////////////////
+function showLoginDialog() {
+	$('#loginModal').modal('show');
+}
+function hideLoginDialog() {
+	$('#loginModal').modal('hide');
+}
+
+function showLoadDialog() {
+	$('#loadModal').modal('show');
+}
+function hideLoadDialog() {
+	$('#loadModal').modal('hide');
+}
+
+
+// Login ---------------------
+function submitLogin() {
+	var rcb = $('#remember');
+    var userField = $('#username');
+    key = 'savedUsername';
+
+    if (rcb.prop('checked')) {
+        $.jStorage.set(key, userField.val());
+    } else {
+        $.jStorage.deleteKey(key);
+    }
+
+	hideLoginDialog();
+
+	showLoadDialog();
+
+	wsConnect();
+
+}
+
+function LoginedWithName(nickname) {
+	$('#loginStatus')[0].innerHTML = nickname +' <a class="navbar-link" href="#" onclick="wsClose();">退出</a>';
+}
+
+function LoginBefore() {
+	$('#loginStatus')[0].innerHTML = '<a class="navbar-link" href="#" onclick="showLoginDialog();">登录</a>';
+}
+
+function cleanLiao()
+{
+	// 切换登录状态
+	LoginBefore();
+	// 清空friend
+	$('#firendDiv')[0].innerHTML = '';
+	// 清空talk
+	$('#chatDialog')[0].innerHTML = '';
+}
+
+
+function openEmoji()
+{
+	$('#inputTextarea').emojiPicker('toggle');
+}
+
+
+window.addEventListener("load", init, false);
+</script>
+
+
+  </body>
+</html>
